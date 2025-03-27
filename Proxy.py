@@ -66,12 +66,6 @@ while True:
   # Get HTTP request from client
   # and store it in the variable: message_bytes
   # ~~~~ INSERT CODE ~~~~
-  try:
-      message_bytes = clientSocket.recv(BUFFER_SIZE)
-  except:
-      print ('Failed to receive data from client')
-      clientSocket.close()
-      continue
   # ~~~~ END CODE INSERT ~~~~
   message = message_bytes.decode('utf-8')
   print ('Received request:')
