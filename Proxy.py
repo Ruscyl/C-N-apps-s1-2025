@@ -78,10 +78,18 @@ while True:
   print ('< ' + message)
 
   # Extract the method, URI and version of the HTTP client request 
-  requestParts = message.split()
-  method = requestParts[0]
-  URI = requestParts[1]
-  version = requestParts[2]
+  # Extract the method, URI and version
+requestParts = message.split()
+method = requestParts[0]
+URI = requestParts[1]
+version = requestParts[2]
+
+# Ensure homepage requests work correctly
+if URI == "/":
+    URI = "http://" + hostname + "/"  # Ensures full URL for homepage
+
+# Remove http:// or https:// from the URI
+URI = re.sub('^(/?)http(s?)://', '', URI, count=1)
 
   print ('Method:\t\t' + method)
   print ('URI:\t\t' + URI)
@@ -160,7 +168,8 @@ while True:
       # originServerRequestHeader is the second line in the request
       # ~~~~ INSERT CODE ~~~~
       originServerRequest = f"{method} {resource} {version}\r\n"
-      originServerRequestHeader = f"Host: {hostname}\r\nConnection: close\r\n"
+      hostHeader = f"Host: {hostname}\r\n"
+      originServerRequestHeader = hostHeader + "Connection: close\r\n"
       # ~~~~ END CODE INSERT ~~~~
 
       # Construct the request to send to the origin server
@@ -191,7 +200,21 @@ while True:
 
       # Send the response to the client
       # ~~~~ INSERT CODE ~~~~
-      clientSocket.sendall(originResponse)
+      # Parse the response headers
+      header_end = originResponse.find(b"\r\n\r\n")
+      headers = originResponse[:header_end].decode(errors="ignore")
+
+      # Check for 301/302 redirects
+      if "301 Moved Permanently" in headers or "302 Found" in headers:
+         print("Redirect detected")
+         match = re.search(r"Location: (.+)\r\n", headers)
+         if match:
+             new_location = match.group(1).strip()
+             print(f"Redirecting to: {new_location}")
+             clientSocket.sendall(f"HTTP/1.1 302 Found\r\nLocation: {new_location}\r\n\r\n".encode())
+             clientSocket.close()
+             continue
+
       # ~~~~ END CODE INSERT ~~~~
 
       # Create a new file in the cache for the requested file.
